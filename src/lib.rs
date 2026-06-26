@@ -15,6 +15,7 @@ pub mod lock;
 pub mod manifest;
 pub mod project;
 pub mod scaffold;
+pub mod seeds;
 pub mod skill;
 pub mod version;
 

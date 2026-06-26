@@ -64,7 +64,8 @@ chmod +x "$TMP"
 
 # ---------- install ----------
 
-# Try the install dir; fall back to ~/.local/bin if we don't have write access.
+# Try the preferred install dir first; fall back to ~/.local/bin if we lack
+# write access, and persist the PATH addition so it survives new terminals.
 if [ -w "$INSTALL_DIR" ]; then
   mv "$TMP" "$INSTALL_DIR/$BIN_NAME"
   echo "Installed to $INSTALL_DIR/$BIN_NAME"
@@ -73,9 +74,22 @@ else
   mkdir -p "$FALLBACK"
   mv "$TMP" "$FALLBACK/$BIN_NAME"
   echo "Installed to $FALLBACK/$BIN_NAME"
-  echo ""
-  echo "Make sure $FALLBACK is in your PATH:"
-  echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+
+  # Persist PATH so alf is available in every new terminal.
+  # We check for an *active* (uncommented) export line — a commented-out line
+  # from a default macOS/Linux rc doesn't count as already configured.
+  EXPORT_LINE="export PATH=\"\$HOME/.local/bin:\$PATH\""
+  for RC in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.profile"; do
+    if [ -f "$RC" ] && ! grep -qE '^[^#]*\.local/bin' "$RC" 2>/dev/null; then
+      echo "" >> "$RC"
+      echo "# added by alf installer" >> "$RC"
+      echo "$EXPORT_LINE" >> "$RC"
+      echo "Added PATH to $RC — restart your terminal or run: source $RC"
+      break
+    fi
+  done
+  # Apply to the current session too.
+  export PATH="$FALLBACK:$PATH"
 fi
 
 echo ""

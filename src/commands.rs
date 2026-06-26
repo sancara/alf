@@ -279,9 +279,26 @@ pub fn catalog_init(path: &Path, remote: Option<&str>, dry_run: bool) -> Result<
         None => {
             fs.create_dir_all(path)?;
             run_git(&mut fs, Some(path), &["init"])?;
-            fs.create_dir_all(&path.join("skills"))?;
-            fs.write(&path.join("skills").join(".gitkeep"), "")?;
             fs.write(&path.join("README.md"), CATALOG_README)?;
+
+            // Seed the catalog with the 7 built-in skills embedded in the binary.
+            for (name, content) in crate::seeds::SEEDS {
+                let skill_dir = path.join("skills").join(name);
+                fs.create_dir_all(&skill_dir)?;
+                fs.write(&skill_dir.join("SKILL.md"), content)?;
+            }
+
+            // Initial commit so the catalog is a proper git repo from the start.
+            run_git(&mut fs, Some(path), &["add", "."])?;
+            run_git(
+                &mut fs,
+                Some(path),
+                &[
+                    "-c", "user.name=alf",
+                    "-c", "user.email=alf@localhost",
+                    "commit", "-m", "seed: 7 built-in personas",
+                ],
+            )?;
         }
     }
     Ok(fs)

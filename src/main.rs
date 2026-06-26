@@ -28,13 +28,10 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Create or clone the master catalog.
-    CatalogInit {
-        /// Where to create or clone the catalog (defaults to the machine path).
-        path: Option<PathBuf>,
-        /// Clone from this git remote instead of creating an empty catalog.
-        #[arg(long)]
-        remote: Option<String>,
+    /// Manage the skill catalog.
+    Catalog {
+        #[command(subcommand)]
+        action: CatalogCommands,
     },
     /// Initialize the current repo: scaffold + install skills.
     Init {
@@ -69,18 +66,32 @@ enum Commands {
     },
 }
 
+#[derive(Subcommand)]
+enum CatalogCommands {
+    /// Create or clone the master catalog (seeds 7 built-in personas).
+    Init {
+        /// Where to create or clone the catalog (defaults to ~/.config/alf/catalog).
+        path: Option<PathBuf>,
+        /// Clone from this git remote instead of creating a fresh catalog.
+        #[arg(long)]
+        remote: Option<String>,
+    },
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
     let catalog_path = resolve_catalog_path(cli.catalog)?;
     let cwd = std::env::current_dir().context("could not read the current directory")?;
 
     match cli.command {
-        Commands::CatalogInit { path, remote } => {
-            let target = path.unwrap_or_else(default_catalog_path);
-            let fs = commands::catalog_init(&target, remote.as_deref(), cli.dry_run)?;
-            print_actions(&fs.actions, cli.dry_run);
-            println!("\nCatalog ready at {}", target.display());
-        }
+        Commands::Catalog { action } => match action {
+            CatalogCommands::Init { path, remote } => {
+                let target = path.unwrap_or_else(default_catalog_path);
+                let fs = commands::catalog_init(&target, remote.as_deref(), cli.dry_run)?;
+                print_actions(&fs.actions, cli.dry_run);
+                println!("\nCatalog ready at {}", target.display());
+            }
+        },
 
         Commands::Init { path, with } => {
             let fs = commands::init(&catalog_path, &path, &with, cli.dry_run)?;
