@@ -1,4 +1,4 @@
-/// The seven built-in skills, embedded at compile time.
+/// The eight built-in skills, embedded at compile time.
 /// `catalog init` writes these into the catalog so it works offline and
 /// without depending on any external repo.
 pub const SEEDS: &[(&str, &str)] = &[

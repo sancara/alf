@@ -104,6 +104,16 @@ pub fn init(
     with: &[String],
     dry_run: bool,
 ) -> Result<Fs, AlfError> {
+    // Fail early: if this isn't a git repo, write nothing at all — not global
+    // skills, not the project dir. The .git/info/exclude step requires it anyway.
+    crate::gitexclude::find_git_dir_pub(repo_dir).ok_or_else(|| {
+        AlfError::Message(format!(
+            "`{}` is not a git repository (no .git found here or in any parent). \
+             Run `git init` first.",
+            repo_dir.display()
+        ))
+    })?;
+
     let catalog = Catalog::open(catalog_root)?;
     let project = Project::for_repo(repo_dir);
     let home = home_dir();
@@ -286,7 +296,7 @@ pub fn catalog_init(path: &Path, remote: Option<&str>, dry_run: bool) -> Result<
             run_git(&mut fs, Some(path), &[
                 "-c", "user.name=alf",
                 "-c", "user.email=alf@localhost",
-                "commit", "-m", "seed: 7 built-in personas",
+                "commit", "-m", "seed: 8 built-in personas",
             ])?;
         }
     }
@@ -510,7 +520,7 @@ pub struct MemoryInstallResult {
 
 /// Install codebase-memory-mcp (if not already present) and add its
 /// data directory to .git/info/exclude so it never pollutes git status.
-pub fn memory_install(repo_root: &Path, dry_run: bool) -> Result<(Fs, MemoryInstallResult), AlfError> {
+pub fn memory_install(catalog_root: &Path, repo_root: &Path, dry_run: bool) -> Result<(Fs, MemoryInstallResult), AlfError> {
     let mut fs = Fs::new(dry_run);
 
     // Check if already installed
@@ -544,10 +554,31 @@ pub fn memory_install(repo_root: &Path, dry_run: bool) -> Result<(Fs, MemoryInst
     // Add .codebase-memory/ to .git/info/exclude
     let exclude_updated = add_cbm_to_exclude(&mut fs, repo_root)?;
 
-    let message = if already_installed {
-        "codebase-memory-mcp already installed. .codebase-memory/ added to .git/info/exclude.".to_string()
+    // Install the skill that teaches the agent how to use the graph.
+    // Best-effort: if the catalog or the skill is missing, we skip silently
+    // rather than failing the whole command.
+    if !dry_run {
+        if let Ok(catalog) = Catalog::open(catalog_root) {
+            if let Ok(skill) = catalog.get("codebase-navigator") {
+                if let Ok(project) = Project::find(repo_root) {
+                    let home = home_dir();
+                    let _ = scaffold::install_skill(&mut fs, &project.skills_dir(), &home, &skill);
+                }
+            }
+        }
+    }
+
+    let message = if dry_run {
+        "dry run: nothing was installed. Without --dry-run, alf would install \
+         codebase-memory-mcp and add .codebase-memory/ to .git/info/exclude."
+            .to_string()
+    } else if already_installed {
+        "codebase-memory-mcp already installed. .codebase-memory/ added to .git/info/exclude."
+            .to_string()
     } else {
-        "codebase-memory-mcp installed. Restart your agent and say \"Index this project\" to build the knowledge graph.".to_string()
+        "codebase-memory-mcp installed. Restart your agent and say \"Index this project\" \
+         to build the knowledge graph."
+            .to_string()
     };
 
     Ok((fs, MemoryInstallResult {

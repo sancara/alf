@@ -1,6 +1,6 @@
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
+
+use sha2::{Digest, Sha256};
 
 use crate::config::config_home;
 use crate::error::AlfError;
@@ -19,10 +19,15 @@ pub struct Project {
 
 impl Project {
     pub fn for_repo(repo_root: &Path) -> Project {
-        let hash = path_hash(repo_root);
+        // Canonicalize so that `alf init .`, `alf init /abs/path`, and a subsequent
+        // `alf list` from inside the repo all derive the SAME project hash.
+        // Without this, `init` hashes the literal "." while every other command
+        // hashes the absolute path, so the state written by init is never found.
+        let canonical = canonicalize_best_effort(repo_root);
+        let hash = path_hash(&canonical);
         let alf_root = alf_projects_dir().join(hash);
         Project {
-            repo_root: repo_root.to_path_buf(),
+            repo_root: canonical,
             alf_root,
         }
     }
@@ -61,8 +66,21 @@ fn alf_projects_dir() -> PathBuf {
     config_home().join("alf").join("projects")
 }
 
+/// Canonicalize a path to its absolute, symlink-resolved form.
+/// Falls back to the original path if it doesn't exist yet (e.g. during init
+/// before the directory is created).
+fn canonicalize_best_effort(path: &Path) -> PathBuf {
+    std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
+}
+
+/// Stable, cross-version hash using SHA-256.
+/// `DefaultHasher` is explicitly documented as not stable between Rust versions,
+/// which would silently "lose" all projects on each alf upgrade. SHA-256 is
+/// deterministic forever. We use the first 16 hex chars (64 bits) — enough to
+/// avoid collisions between repos on one machine.
 fn path_hash(path: &Path) -> String {
-    let mut hasher = DefaultHasher::new();
-    path.hash(&mut hasher);
-    format!("{:016x}", hasher.finish())
+    let mut hasher = Sha256::new();
+    hasher.update(path.to_string_lossy().as_bytes());
+    let digest = hasher.finalize();
+    format!("{:x}", digest)[..16].to_string()
 }

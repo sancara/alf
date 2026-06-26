@@ -12,6 +12,7 @@ fn make_catalog(root: &Path) {
     write_skill(root, "backend-expert",          "0.1.0", "Use for server logic and data.");
     write_skill(root, "frontend-expert",         "0.1.0", "Use for UI.");
     write_skill(root, "security-expert",         "0.1.0", "Use for auth and sensitive data.");
+    write_skill(root, "codebase-navigator",       "0.1.0", "Use when codebase-memory-mcp is installed.");
 }
 
 fn write_skill(catalog_root: &Path, name: &str, version: &str, description: &str) {
@@ -42,7 +43,7 @@ fn catalog_lists_skills_sorted() {
     let skills = catalog.skills().unwrap();
     let names: Vec<_> = skills.iter().map(|s| s.name.as_str()).collect();
     assert_eq!(names, vec![
-        "backend-expert", "execution-plan", "frontend-expert",
+        "backend-expert", "codebase-navigator", "execution-plan", "frontend-expert",
         "quality-reviewer", "security-expert", "understand-the-problem"
     ]);
 }
@@ -213,4 +214,36 @@ fn git_commit(dir: &Path, msg: &str) {
         .args(["-c","user.name=test","-c","user.email=test@localhost","commit","-q","-m",msg])
         .status().unwrap();
     assert!(status.success(), "git commit failed");
+}
+
+#[test]
+fn init_then_list_find_the_same_project() {
+    // Regression for bug #1: `alf init .` (relative path) and subsequent
+    // commands must derive the SAME project hash — canonicalization fixes this.
+    let cat = tempfile::tempdir().unwrap();
+    make_catalog(cat.path());
+    let repo = tempfile::tempdir().unwrap();
+    make_git_repo(repo.path());
+
+    let fake_home = tempfile::tempdir().unwrap();
+    std::env::set_var("HOME", fake_home.path());
+    std::env::set_var("XDG_CONFIG_HOME", fake_home.path().join(".config"));
+
+    // init with the repo path (as commands::init receives it from main)
+    commands::init(cat.path(), repo.path(), &[], false).unwrap();
+
+    // list must find the project that init just created (same hash)
+    let report = commands::list(cat.path(), Some(repo.path())).unwrap();
+    let installed = report.installed.expect(
+        "list did not find the project: init and list derived different hashes"
+    );
+    assert!(!installed.is_empty(), "project should have installed skills");
+
+    // add on the same repo must not fail with "project not found"
+    commands::add(cat.path(), repo.path(), "codebase-navigator", false).unwrap();
+
+    // verify it shows up in list
+    let report2 = commands::list(cat.path(), Some(repo.path())).unwrap();
+    let installed2 = report2.installed.unwrap();
+    assert!(installed2.iter().any(|e| e.name == "codebase-navigator"));
 }

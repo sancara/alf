@@ -79,7 +79,7 @@ enum MemoryCommands {
 
 #[derive(Subcommand)]
 enum CatalogCommands {
-    /// Create or clone the master catalog (seeds 7 built-in personas).
+    /// Create or clone the master catalog (seeds 8 built-in personas).
     Init {
         /// Where to create or clone the catalog (defaults to ~/.config/alf/catalog).
         path: Option<PathBuf>,
@@ -89,7 +89,17 @@ enum CatalogCommands {
     },
 }
 
-fn main() -> Result<()> {
+fn main() {
+    if let Err(err) = run() {
+        eprintln!("error: {err}");
+        for cause in err.chain().skip(1) {
+            eprintln!("  caused by: {cause}");
+        }
+        std::process::exit(1);
+    }
+}
+
+fn run() -> Result<()> {
     let cli = Cli::parse();
     let catalog_path = resolve_catalog_path(cli.catalog)?;
     let cwd = std::env::current_dir().context("could not read the current directory")?;
@@ -156,10 +166,10 @@ fn main() -> Result<()> {
 
         Commands::Memory { action } => match action {
             MemoryCommands::Install => {
-                let (fs, result) = commands::memory_install(&cwd, cli.dry_run)?;
+                let (fs, result) = commands::memory_install(&catalog_path, &cwd, cli.dry_run)?;
                 print_actions(&fs.actions, cli.dry_run);
                 println!("\n{}", result.message);
-                if result.installed_ok && !result.already_installed {
+                if result.installed_ok && !result.already_installed && !cli.dry_run {
                     println!("\nNext: restart your agent (Claude Code, Cursor, etc.) and say");
                     println!("  \"Index this project\"");
                     println!("to build the knowledge graph.");
@@ -222,15 +232,6 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn parse_bump(s: &str) -> Result<Bump> {
-    match s {
-        "major" => Ok(Bump::Major),
-        "minor" => Ok(Bump::Minor),
-        "patch" => Ok(Bump::Patch),
-        other => anyhow::bail!("invalid --bump `{other}` (expected major, minor, or patch)"),
-    }
-}
-
 fn resolve_catalog_path(flag: Option<PathBuf>) -> Result<PathBuf> {
     if let Some(p) = flag {
         return Ok(p);
@@ -245,5 +246,14 @@ fn print_actions(actions: &[String], dry_run: bool) {
     }
     for action in actions {
         println!("  {action}");
+    }
+}
+
+fn parse_bump(s: &str) -> Result<Bump> {
+    match s {
+        "major" => Ok(Bump::Major),
+        "minor" => Ok(Bump::Minor),
+        "patch" => Ok(Bump::Patch),
+        other => anyhow::bail!("invalid --bump `{other}` (expected major, minor, or patch)"),
     }
 }
