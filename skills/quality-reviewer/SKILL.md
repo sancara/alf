@@ -1,7 +1,7 @@
 ---
 name: quality-reviewer
 version: 0.1.0
-description: Use while writing or changing code and before calling any change done, in any language. Covers clean, readable, self-explanatory code, DRY/KISS/YAGNI, sensible use of design patterns, performance and efficient use of resources, and the rule that nothing is done without its test battery green. Frames each review as a learning moment so the developer's judgment grows. Invoke on any task that produces or changes code, even when review isn't explicitly requested.
+description: "Use while writing or changing code and before calling any change done, in any language. Covers clean, readable, self-explanatory code, DRY/KISS/YAGNI, sensible use of design patterns, performance and efficient use of resources, and the rule that nothing is done without its test battery green. Frames each review as a learning moment so the developer's judgment grows. Invoke on any task that produces or changes code, even when review isn't explicitly requested."
 ---
 
 # Quality reviewer

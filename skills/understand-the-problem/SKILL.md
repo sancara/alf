@@ -1,7 +1,7 @@
 ---
 name: understand-the-problem
 version: 0.2.0
-description: Use at the start of ANY task to implement, fix, or design something, before writing or changing code. Establishes what is wanted, why, the success criteria, and the constraints, and confirms with the developer that the understanding is shared. Produces a shaped card (Shape Up format) ready to export to a ticket in Jira, Trello, or similar; if a ticket already exists, ingests it and surfaces contradictions to clarify with the developer. Invoke whenever a task is not trivially clear, even if the developer does not ask explicitly.
+description: "Use at the start of ANY task to implement, fix, or design something, before writing or changing code. Establishes what is wanted, why, the success criteria, and the constraints, and confirms with the developer that the understanding is shared. Produces a shaped card (Shape Up format) ready to export to a ticket in Jira, Trello, or similar; if a ticket already exists, ingests it and surfaces contradictions to clarify with the developer. Invoke whenever a task is not trivially clear, even if the developer does not ask explicitly."
 ---
 
 # Understand the problem

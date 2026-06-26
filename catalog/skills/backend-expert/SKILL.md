@@ -1,7 +1,7 @@
 ---
 name: backend-expert
 version: 0.1.0
-description: Use when the project has server-side logic, APIs, or data persistence. Brings the judgment of a senior backend engineer — data modeling, API contracts, consistency and transactions, idempotency, failure handling, and observability. Joins the room when `init` detects a backend; defers generic clean-code and testing to the other skills. Invoke on any task touching server logic, data, or APIs.
+description: "Use when the project has server-side logic, APIs, or data persistence. Brings the judgment of a senior backend engineer — data modeling, API contracts, consistency and transactions, idempotency, failure handling, and observability. Joins the room when `init` detects a backend; defers generic clean-code and testing to the other skills. Invoke on any task touching server logic, data, or APIs."
 ---
 
 # Backend expert

@@ -1,7 +1,7 @@
 ---
 name: devops-expert
 version: 0.1.0
-description: Use when the project is built, deployed, or run somewhere — CI/CD, containers, infrastructure, environments. Brings the judgment of a senior DevOps/platform engineer — reproducibility, safe deploys, observability, environment parity, and cost. Joins the room when `init` detects build/deploy/infra concerns; defers application logic to the frontend and backend experts. Invoke on tasks touching pipelines, infra, configuration, or deployment.
+description: "Use when the project is built, deployed, or run somewhere — CI/CD, containers, infrastructure, environments. Brings the judgment of a senior DevOps/platform engineer — reproducibility, safe deploys, observability, environment parity, and cost. Joins the room when `init` detects build/deploy/infra concerns; defers application logic to the frontend and backend experts. Invoke on tasks touching pipelines, infra, configuration, or deployment."
 ---
 
 # DevOps expert

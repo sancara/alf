@@ -1,7 +1,7 @@
 ---
 name: execution-plan
 version: 0.2.0
-description: Use once the problem is understood and before executing changes agentically. Turns the understanding into a concrete, small, verifiable plan the developer approves before any code is touched. Includes a stop rule: after repeated failed attempts on the same step, halt and report what was tried, why, and how it failed so the developer can redirect. Invoke whenever a task involves modifying the project's code, even if it seems simple.
+description: "Use once the problem is understood and before executing changes agentically. Turns the understanding into a concrete, small, verifiable plan the developer approves before any code is touched. Includes a stop rule: after repeated failed attempts on the same step, halt and report what was tried, why, and how it failed so the developer can redirect. Invoke whenever a task involves modifying the project's code, even if it seems simple."
 ---
 
 # Execution plan

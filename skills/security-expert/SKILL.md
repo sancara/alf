@@ -1,7 +1,7 @@
 ---
 name: security-expert
 version: 0.1.0
-description: Use when the project handles untrusted input, authentication, user data, money, or anything an attacker would want. Brings the judgment of a senior security engineer, reviewing defensively — authentication/authorization, input handling, secrets, data protection, dependencies, and least privilege. Joins the room when `init` detects security-sensitive surfaces; defers general code quality to the other skills. Invoke on tasks touching auth, user input, sensitive data, or external integrations.
+description: "Use when the project handles untrusted input, authentication, user data, money, or anything an attacker would want. Brings the judgment of a senior security engineer, reviewing defensively — authentication/authorization, input handling, secrets, data protection, dependencies, and least privilege. Joins the room when `init` detects security-sensitive surfaces; defers general code quality to the other skills. Invoke on tasks touching auth, user input, sensitive data, or external integrations."
 ---
 
 # Security expert

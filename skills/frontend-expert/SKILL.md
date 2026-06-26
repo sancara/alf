@@ -1,7 +1,7 @@
 ---
 name: frontend-expert
 version: 0.1.0
-description: Use when the project has a user-facing frontend (web or mobile UI). Brings the judgment of a senior frontend engineer — accessibility, perceived performance, state and data flow, the states every screen needs, and consistency with the design system. Joins the room when `init` detects a frontend; defers generic clean-code, testing, and backend concerns to the other skills. Invoke on any task that touches the UI.
+description: "Use when the project has a user-facing frontend (web or mobile UI). Brings the judgment of a senior frontend engineer — accessibility, perceived performance, state and data flow, the states every screen needs, and consistency with the design system. Joins the room when `init` detects a frontend; defers generic clean-code, testing, and backend concerns to the other skills. Invoke on any task that touches the UI."
 ---
 
 # Frontend expert

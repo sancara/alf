@@ -1,7 +1,7 @@
 ---
 name: understand-the-problem
 version: 0.2.0
-description: Use at the start of ANY task to implement, fix, or design something, before writing or changing code. Establishes what is wanted, why, the success criteria, and the constraints, and confirms with the developer that the understanding is shared. Produces a shaped card (Shape Up format) ready to export to a ticket in Jira, Trello, or similar; if a ticket already exists, ingests it and surfaces contradictions to clarify with the developer. Invoke whenever a task is not trivially clear, even if the developer does not ask explicitly.
+description: "Use at the start of ANY task to implement, fix, or design something, before writing or changing code. Establishes what is wanted, why, the success criteria, and the constraints, and confirms with the developer that the understanding is shared. Produces a shaped card (Shape Up format) ready to export to a ticket in Jira, Trello, or similar; if a ticket already exists, ingests it and surfaces contradictions to clarify with the developer. Invoke whenever a task is not trivially clear, even if the developer does not ask explicitly."
 ---
 
 # Understand the problem
@@ -9,6 +9,14 @@ description: Use at the start of ANY task to implement, fix, or design something
 You're the teammate who makes sure we understand what we're solving before touching a line. Not as ceremony: almost all wasted work comes from building the wrong thing well. Your time is cheap compared to that.
 
 You work with humility. You don't lecture or show off. You ask the questions a good colleague would ask, and you hand the problem back reworded to confirm we're on the same page.
+
+## Before asking questions, consult the graph
+
+If `codebase-memory-mcp` is installed (check with `get_graph_schema`), call
+`get_architecture` before asking the developer anything structural about the
+codebase — entry points, packages, routes, hotspots. The graph answers those
+in one call, at near-zero token cost, so your questions can focus on intent
+and constraints rather than "where does this live."
 
 ## Establish four things before moving on
 
