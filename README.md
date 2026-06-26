@@ -50,8 +50,7 @@ your-cloned-repo/             ← untouched — zero new files, clean git status
 curl -sSfL https://raw.githubusercontent.com/sancara/alf/main/install.sh | sh
 ```
 
-**Windows** — download `alf-windows-x86_64.exe` from
-[Releases](https://github.com/sancara/alf/releases/latest) and add it to your PATH.
+**Windows** — download `alf-windows-x86_64.exe` from [Releases](https://github.com/sancara/alf/releases/latest) and add it to your PATH.
 
 **From source** (requires Rust):
 
@@ -63,42 +62,51 @@ cargo install --git https://github.com/sancara/alf
 
 These steps are run **once per machine** (steps 1–2) and **once per repo** (steps 3–7).
 
+### Once per machine
+
+**1. Create your personal catalog** (seeds 8 built-in personas)
 ```sh
-# ── Once per machine ──────────────────────────────────────────────────────────
-
-# 1. Create your personal catalog (seeds 8 built-in personas)
 alf catalog init
-
-# 2. Install code intelligence
-alf memory install
-# → installs codebase-memory-mcp and the codebase-navigator skill
-
-# ── Once per repo ─────────────────────────────────────────────────────────────
-
-# 3. Go to any repo — yours, a client's, a company's
-cd any-repo
-
-# 4. Scaffold the repo (detects stack, installs matching personas)
-alf init
-
-# 5. Open your agent (Claude Code, Cursor, Antigravity…)
-#    Personas are already in ~/.claude/skills/ — no extra setup needed.
-
-# 6. Build the knowledge graph
-#    Say to your agent: "Index this project"
-#    codebase-memory-mcp indexes the codebase in seconds.
-
-# 7. Complete AGENTS.md — the most important step
-#    Say to your agent:
-#      "Read the AGENTS.md in ~/.config/alf/projects/ for this repo.
-#       Complete all <...> sections using get_architecture to understand
-#       the stack and structure. Propose the result for my approval."
-#    The agent uses the graph to map the codebase and fills in the blanks.
-#    You review and approve. This is the first exercise of the method:
-#    the agent proposes, you decide.
 ```
 
-After step 7, the full spec-driven loop is active for every subsequent task.
+**2. Install code intelligence** (installs `codebase-memory-mcp` and the `codebase-navigator` skill)
+```sh
+alf memory install
+```
+
+### Once per repo 
+
+**3. Go to any repo** — yours, a client's, a company's
+```sh
+cd any-repo
+```
+
+**4. Scaffold the repo** (detects stack, installs matching personas)
+```sh
+alf init
+```
+
+**5. Open your agent** (Claude Code, Cursor, Antigravity…)
+> 💡 Personas are already in `~/.claude/skills/` — no extra setup needed.
+
+**6. Build the knowledge graph**
+Say to your agent in the chat:
+> "Index this project"
+
+*Note: `codebase-memory-mcp` indexes the codebase in seconds.*
+
+**7. Complete AGENTS.md — the most important step**
+Copy and paste this prompt to your agent:
+
+```text
+Read the AGENTS.md in ~/.config/alf/projects/ for this repo.
+Complete all <...> sections using get_architecture to understand
+the stack and structure. Propose the result for my approval.
+```
+
+> 🤖 **What happens next:** The agent uses the graph to map the codebase and fills in the blanks. You review and approve. This is the first exercise of the method: **the agent proposes, you decide.**
+
+---
 
 ## The spec-driven loop (every task)
 
@@ -142,8 +150,7 @@ Global flags: `--dry-run`, `--catalog PATH`.
 
 ## The personas
 
-Eight skills ship in the catalog. Three are generic (always installed); four are
-vertical (added when `init` detects the relevant stack); one for code intelligence.
+Eight skills ship in the catalog. Three are generic (always installed); four are vertical (added when `init` detects the relevant stack); one for code intelligence.
 
 **Generic — installed in every project:**
 - `understand-the-problem` — what/why/success criteria before any code; Shape Up card; uses `get_architecture` when the graph is available
@@ -157,9 +164,7 @@ vertical (added when `init` detects the relevant stack); one for code intelligen
 - `security-expert` — defensive review: input handling, authz, least privilege, secrets
 
 **Code intelligence:**
-- `codebase-navigator` — installed by `alf memory install`; guides the agent to use
-  `codebase-memory-mcp`'s 14 MCP tools (`get_architecture`, `trace_call_path`,
-  `detect_changes`, Cypher queries) — 99% fewer tokens than file-by-file exploration
+- `codebase-navigator` — installed by `alf memory install`; guides the agent to use `codebase-memory-mcp`'s 14 MCP tools (`get_architecture`, `trace_call_path`, `detect_changes`, Cypher queries) — 99% fewer tokens than file-by-file exploration
 
 ## The learning loop
 
@@ -175,9 +180,7 @@ alf glearn    → bumps semver, commits to your catalog, re-tracks the project
 git push      → your catalog grows; every future project benefits
 ```
 
-`alf list` flags skills whose installed content drifted from the lock hash —
-these are `glearn` candidates. The hash also detects supply-chain tampering
-(instruction files are an attack surface).
+`alf list` flags skills whose installed content drifted from the lock hash — these are `glearn` candidates. The hash also detects supply-chain tampering (instruction files are an attack surface).
 
 ## Zero repo pollution
 
@@ -187,8 +190,7 @@ these are `glearn` candidates. The hash also detects supply-chain tampering
 - Project state goes to `~/.config/alf/projects/<hash>/`
 - `alf init` adds its patterns to `.git/info/exclude` — per-clone, never committed, invisible to teammates
 
-Two developers on the same repo can have different skills and learnings without
-stepping on each other. The repo stays clean for everyone.
+Two developers on the same repo can have different skills and learnings without stepping on each other. The repo stays clean for everyone.
 
 ## Your catalog is yours
 
