@@ -498,3 +498,112 @@ fn run_git(fs: &mut Fs, cwd: Option<&Path>, args: &[&str]) -> Result<(), AlfErro
     }
     Ok(())
 }
+
+// ---------------- memory install ----------------
+
+pub struct MemoryInstallResult {
+    pub already_installed: bool,
+    pub installed_ok: bool,
+    pub exclude_updated: bool,
+    pub message: String,
+}
+
+/// Install codebase-memory-mcp (if not already present) and add its
+/// data directory to .git/info/exclude so it never pollutes git status.
+pub fn memory_install(repo_root: &Path, dry_run: bool) -> Result<(Fs, MemoryInstallResult), AlfError> {
+    let mut fs = Fs::new(dry_run);
+
+    // Check if already installed
+    let already_installed = is_cbm_installed();
+
+    if already_installed {
+        fs.actions.push("codebase-memory-mcp already installed — skipping download".to_string());
+    } else {
+        // Invoke the official installer via sh
+        let script = "curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash";
+        fs.actions.push(format!("sh -c \"{}\"", script));
+        if !dry_run {
+            let status = std::process::Command::new("sh")
+                .arg("-c")
+                .arg(script)
+                .status()
+                .map_err(|e| AlfError::Message(format!(
+                    "could not run codebase-memory-mcp installer: {e}"
+                )))?;
+            if !status.success() {
+                return Ok((fs, MemoryInstallResult {
+                    already_installed: false,
+                    installed_ok: false,
+                    exclude_updated: false,
+                    message: "codebase-memory-mcp installer failed. Check your network connection and try again, or install manually: https://github.com/DeusData/codebase-memory-mcp".to_string(),
+                }));
+            }
+        }
+    }
+
+    // Add .codebase-memory/ to .git/info/exclude
+    let exclude_updated = add_cbm_to_exclude(&mut fs, repo_root)?;
+
+    let message = if already_installed {
+        "codebase-memory-mcp already installed. .codebase-memory/ added to .git/info/exclude.".to_string()
+    } else {
+        "codebase-memory-mcp installed. Restart your agent and say \"Index this project\" to build the knowledge graph.".to_string()
+    };
+
+    Ok((fs, MemoryInstallResult {
+        already_installed,
+        installed_ok: true,
+        exclude_updated,
+        message,
+    }))
+}
+
+fn is_cbm_installed() -> bool {
+    // Check common install locations
+    let home = home_dir();
+    let candidates = [
+        home.join(".local/bin/codebase-memory-mcp"),
+        std::path::PathBuf::from("/usr/local/bin/codebase-memory-mcp"),
+    ];
+    candidates.iter().any(|p| p.is_file())
+        || std::process::Command::new("which")
+            .arg("codebase-memory-mcp")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+}
+
+const CBM_EXCLUDE_PATTERNS: &[&str] = &[
+    "# --- codebase-memory-mcp (added by alf) ---",
+    ".codebase-memory/",
+    "# --- end codebase-memory-mcp ---",
+];
+const CBM_MARKER: &str = "# --- codebase-memory-mcp";
+
+fn add_cbm_to_exclude(fs: &mut Fs, repo_root: &Path) -> Result<bool, AlfError> {
+    let git_dir = crate::gitexclude::find_git_dir_pub(repo_root)
+        .ok_or_else(|| AlfError::Message(format!(
+            "no .git directory found at or above {}",
+            repo_root.display()
+        )))?;
+
+    let exclude_path = git_dir.join("info").join("exclude");
+    let current = if exclude_path.exists() {
+        std::fs::read_to_string(&exclude_path).map_err(|e| AlfError::Io {
+            path: exclude_path.clone(),
+            source: e,
+        })?
+    } else {
+        String::new()
+    };
+
+    if current.contains(CBM_MARKER) {
+        fs.actions.push(format!("skip (already present) {}", exclude_path.display()));
+        return Ok(false);
+    }
+
+    let addition = format!("\n{}\n", CBM_EXCLUDE_PATTERNS.join("\n"));
+    let new_content = format!("{}{}", current.trim_end(), addition);
+    fs.write(&exclude_path, &new_content)?;
+    Ok(true)
+}

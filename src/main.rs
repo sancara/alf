@@ -48,6 +48,11 @@ enum Commands {
     Update { name: Option<String> },
     /// List installed and available skills.
     List,
+    /// Manage code intelligence memory (codebase-memory-mcp).
+    Memory {
+        #[command(subcommand)]
+        action: MemoryCommands,
+    },
     /// Reconcile local skill edits into this project (project learn).
     Plearn,
     /// Promote a project skill to the shared catalog (global learn).
@@ -64,6 +69,12 @@ enum Commands {
         #[arg(long)]
         push: bool,
     },
+}
+
+#[derive(Subcommand)]
+enum MemoryCommands {
+    /// Install codebase-memory-mcp and configure it for this repo.
+    Install,
 }
 
 #[derive(Subcommand)]
@@ -142,6 +153,19 @@ fn main() -> Result<()> {
                 println!("  {} {} {}", mark, e.name, e.version);
             }
         }
+
+        Commands::Memory { action } => match action {
+            MemoryCommands::Install => {
+                let (fs, result) = commands::memory_install(&cwd, cli.dry_run)?;
+                print_actions(&fs.actions, cli.dry_run);
+                println!("\n{}", result.message);
+                if result.installed_ok && !result.already_installed {
+                    println!("\nNext: restart your agent (Claude Code, Cursor, etc.) and say");
+                    println!("  \"Index this project\"");
+                    println!("to build the knowledge graph.");
+                }
+            }
+        },
 
         Commands::Plearn => {
             let (fs, entries) = commands::plearn(&catalog_path, &cwd, cli.dry_run)?;

@@ -75,6 +75,11 @@ pub fn ensure_git_exclude(fs: &mut Fs, repo_root: &Path) -> Result<(), AlfError>
 }
 
 /// Walk up from `start` until we find a `.git` directory.
+pub fn find_git_dir_pub(start: &Path) -> Option<std::path::PathBuf> {
+    find_git_dir(start)
+}
+
+/// Walk up from `start` until we find a `.git` directory (internal).
 fn find_git_dir(start: &Path) -> Option<std::path::PathBuf> {
     let mut current = Some(start);
     while let Some(dir) = current {

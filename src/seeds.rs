@@ -30,4 +30,8 @@ pub const SEEDS: &[(&str, &str)] = &[
         "security-expert",
         include_str!("../skills/security-expert/SKILL.md"),
     ),
+    (
+        "codebase-navigator",
+        include_str!("../skills/codebase-navigator/SKILL.md"),
+    ),
 ];
