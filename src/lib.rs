@@ -11,6 +11,7 @@ pub mod config;
 pub mod detect;
 pub mod error;
 pub mod fsops;
+pub mod gitexclude;
 pub mod lock;
 pub mod manifest;
 pub mod project;

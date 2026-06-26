@@ -98,7 +98,7 @@ pub fn default_catalog_path() -> PathBuf {
     config_home().join("alf").join("catalog")
 }
 
-fn config_home() -> PathBuf {
+pub fn config_home() -> PathBuf {
     if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
         if !xdg.is_empty() {
             return PathBuf::from(xdg);
