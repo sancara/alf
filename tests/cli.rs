@@ -6,13 +6,43 @@ use alf::commands;
 use alf::project::Project;
 
 fn make_catalog(root: &Path) {
-    write_skill(root, "understand-the-problem", "0.2.0", "Use at the start of any task.");
-    write_skill(root, "execution-plan",          "0.2.0", "Use before modifying code.");
-    write_skill(root, "quality-reviewer",        "0.1.0", "Use whenever code changes.");
-    write_skill(root, "backend-expert",          "0.1.0", "Use for server logic and data.");
-    write_skill(root, "frontend-expert",         "0.1.0", "Use for UI.");
-    write_skill(root, "security-expert",         "0.1.0", "Use for auth and sensitive data.");
-    write_skill(root, "codebase-navigator",       "0.1.0", "Use when codebase-memory-mcp is installed.");
+    write_skill(
+        root,
+        "understand-the-problem",
+        "0.2.0",
+        "Use at the start of any task.",
+    );
+    write_skill(
+        root,
+        "execution-plan",
+        "0.2.0",
+        "Use before modifying code.",
+    );
+    write_skill(
+        root,
+        "quality-reviewer",
+        "0.1.0",
+        "Use whenever code changes.",
+    );
+    write_skill(
+        root,
+        "backend-expert",
+        "0.1.0",
+        "Use for server logic and data.",
+    );
+    write_skill(root, "frontend-expert", "0.1.0", "Use for UI.");
+    write_skill(
+        root,
+        "security-expert",
+        "0.1.0",
+        "Use for auth and sensitive data.",
+    );
+    write_skill(
+        root,
+        "codebase-navigator",
+        "0.1.0",
+        "Use when codebase-memory-mcp is installed.",
+    );
 }
 
 fn write_skill(catalog_root: &Path, name: &str, version: &str, description: &str) {
@@ -30,7 +60,11 @@ fn make_git_repo(root: &Path) {
     // git init already creates the exclude file, but ensure it exists
     let exclude = root.join(".git").join("info").join("exclude");
     if !exclude.exists() {
-        fs::write(&exclude, "# git ls-files --others --exclude-from=.git/info/exclude\n").unwrap();
+        fs::write(
+            &exclude,
+            "# git ls-files --others --exclude-from=.git/info/exclude\n",
+        )
+        .unwrap();
     }
 }
 
@@ -42,10 +76,18 @@ fn catalog_lists_skills_sorted() {
     let catalog = Catalog::open(tmp.path()).unwrap();
     let skills = catalog.skills().unwrap();
     let names: Vec<_> = skills.iter().map(|s| s.name.as_str()).collect();
-    assert_eq!(names, vec![
-        "backend-expert", "codebase-navigator", "execution-plan", "frontend-expert",
-        "quality-reviewer", "security-expert", "understand-the-problem"
-    ]);
+    assert_eq!(
+        names,
+        vec![
+            "backend-expert",
+            "codebase-navigator",
+            "execution-plan",
+            "frontend-expert",
+            "quality-reviewer",
+            "security-expert",
+            "understand-the-problem"
+        ]
+    );
 }
 
 #[test]
@@ -67,30 +109,46 @@ fn init_installs_skills_outside_repo() {
     let project = Project::for_repo(repo.path());
 
     // Skills live in alf's project dir, NOT in the repo
-    let skill = project.skills_dir().join("understand-the-problem").join("SKILL.md");
+    let skill = project
+        .skills_dir()
+        .join("understand-the-problem")
+        .join("SKILL.md");
     assert!(skill.is_file(), "skill should be in alf project dir");
 
     // Skills also copied to ~/.claude/skills/
-    let claude_skill = fake_home.path()
-        .join(".claude").join("skills")
-        .join("understand-the-problem").join("SKILL.md");
-    assert!(claude_skill.is_file(), "skill should be in ~/.claude/skills/");
+    let claude_skill = fake_home
+        .path()
+        .join(".claude")
+        .join("skills")
+        .join("understand-the-problem")
+        .join("SKILL.md");
+    assert!(
+        claude_skill.is_file(),
+        "skill should be in ~/.claude/skills/"
+    );
 
     // alf metadata lives outside the repo too
     assert!(project.manifest_path().exists());
     assert!(project.lock_path().exists());
 
     // The repo itself has NO new files (except .git/info/exclude which is already there)
-    let repo_files: Vec<_> = fs::read_dir(repo.path()).unwrap()
+    let repo_files: Vec<_> = fs::read_dir(repo.path())
+        .unwrap()
         .flatten()
         .filter(|e| e.file_name() != ".git" && e.file_name() != "Cargo.toml")
         .collect();
-    assert!(repo_files.is_empty(), "repo should have no new files from alf: {:?}", 
-        repo_files.iter().map(|e| e.file_name()).collect::<Vec<_>>());
+    assert!(
+        repo_files.is_empty(),
+        "repo should have no new files from alf: {:?}",
+        repo_files.iter().map(|e| e.file_name()).collect::<Vec<_>>()
+    );
 
     // .git/info/exclude has alf's patterns
     let exclude = fs::read_to_string(repo.path().join(".git/info/exclude")).unwrap();
-    assert!(exclude.contains("# --- alf"), ".git/info/exclude should contain alf patterns");
+    assert!(
+        exclude.contains("# --- alf"),
+        ".git/info/exclude should contain alf patterns"
+    );
     assert!(exclude.contains("CLAUDE.md"));
     assert!(exclude.contains("AGENTS.md"));
 }
@@ -108,9 +166,13 @@ fn dry_run_writes_nothing() {
 
     let fs_log = commands::init(cat.path(), repo.path(), &[], true).unwrap();
 
-    assert!(!fs_log.actions.is_empty(), "dry run should still plan actions");
+    assert!(
+        !fs_log.actions.is_empty(),
+        "dry run should still plan actions"
+    );
     // Nothing written to repo
-    let repo_files: Vec<_> = fs::read_dir(repo.path()).unwrap()
+    let repo_files: Vec<_> = fs::read_dir(repo.path())
+        .unwrap()
         .flatten()
         .filter(|e| e.file_name() != ".git")
         .collect();
@@ -161,9 +223,12 @@ fn plearn_reconciles_local_edits() {
     assert!(entries.iter().any(|e| e.name == "execution-plan"));
 
     // ~/.claude/skills updated
-    let mirror = fake_home.path()
-        .join(".claude").join("skills")
-        .join("execution-plan").join("SKILL.md");
+    let mirror = fake_home
+        .path()
+        .join(".claude")
+        .join("skills")
+        .join("execution-plan")
+        .join("SKILL.md");
     assert!(fs::read_to_string(&mirror).unwrap().contains("DB mock"));
 }
 
@@ -185,34 +250,58 @@ fn glearn_promotes_to_catalog_and_retracks() {
     commands::init(cat.path(), repo.path(), &[], false).unwrap();
     let project = Project::for_repo(repo.path());
 
-    let skill = project.skills_dir().join("quality-reviewer").join("SKILL.md");
+    let skill = project
+        .skills_dir()
+        .join("quality-reviewer")
+        .join("SKILL.md");
     let mut content = fs::read_to_string(&skill).unwrap();
     content.push_str("\nAlways measure before optimizing.\n");
     fs::write(&skill, &content).unwrap();
 
     let (_fs, result) = commands::glearn(
-        cat.path(), repo.path(), "quality-reviewer",
-        alf::version::Bump::Minor, None, false, false,
-    ).unwrap();
+        cat.path(),
+        repo.path(),
+        "quality-reviewer",
+        alf::version::Bump::Minor,
+        None,
+        false,
+        false,
+    )
+    .unwrap();
     assert_eq!(result.to_version, "0.2.0");
     assert!(result.committed);
 
-    let cat_md = fs::read_to_string(
-        cat.path().join("skills/quality-reviewer/SKILL.md")
-    ).unwrap();
+    let cat_md = fs::read_to_string(cat.path().join("skills/quality-reviewer/SKILL.md")).unwrap();
     assert!(cat_md.contains("version: 0.2.0"));
     assert!(cat_md.contains("measure before optimizing"));
 }
 
 fn git(dir: &Path, args: &[&str]) {
-    let status = std::process::Command::new("git").arg("-C").arg(dir).args(args).status().unwrap();
+    let status = std::process::Command::new("git")
+        .arg("-C")
+        .arg(dir)
+        .args(args)
+        .status()
+        .unwrap();
     assert!(status.success(), "git {args:?} failed");
 }
 
 fn git_commit(dir: &Path, msg: &str) {
-    let status = std::process::Command::new("git").arg("-C").arg(dir)
-        .args(["-c","user.name=test","-c","user.email=test@localhost","commit","-q","-m",msg])
-        .status().unwrap();
+    let status = std::process::Command::new("git")
+        .arg("-C")
+        .arg(dir)
+        .args([
+            "-c",
+            "user.name=test",
+            "-c",
+            "user.email=test@localhost",
+            "commit",
+            "-q",
+            "-m",
+            msg,
+        ])
+        .status()
+        .unwrap();
     assert!(status.success(), "git commit failed");
 }
 
@@ -234,10 +323,13 @@ fn init_then_list_find_the_same_project() {
 
     // list must find the project that init just created (same hash)
     let report = commands::list(cat.path(), Some(repo.path())).unwrap();
-    let installed = report.installed.expect(
-        "list did not find the project: init and list derived different hashes"
+    let installed = report
+        .installed
+        .expect("list did not find the project: init and list derived different hashes");
+    assert!(
+        !installed.is_empty(),
+        "project should have installed skills"
     );
-    assert!(!installed.is_empty(), "project should have installed skills");
 
     // add on the same repo must not fail with "project not found"
     commands::add(cat.path(), repo.path(), "codebase-navigator", false).unwrap();
@@ -246,4 +338,97 @@ fn init_then_list_find_the_same_project() {
     let report2 = commands::list(cat.path(), Some(repo.path())).unwrap();
     let installed2 = report2.installed.unwrap();
     assert!(installed2.iter().any(|e| e.name == "codebase-navigator"));
+}
+
+#[test]
+fn init_on_non_git_dir_fails_without_writing_state() {
+    let cat = tempfile::tempdir().unwrap();
+    make_catalog(cat.path());
+
+    // A plain directory — NOT a git repo.
+    let repo = tempfile::tempdir().unwrap();
+    fs::write(repo.path().join("Cargo.toml"), "[package]\nname=\"x\"\n").unwrap();
+
+    let fake_home = tempfile::tempdir().unwrap();
+    std::env::set_var("HOME", fake_home.path());
+    std::env::set_var("XDG_CONFIG_HOME", fake_home.path().join(".config"));
+
+    // init must fail early...
+    let result = commands::init(cat.path(), repo.path(), &[], false);
+    assert!(
+        result.is_err(),
+        "init should fail when the dir is not a git repo"
+    );
+
+    // ...and leave no project state behind (no half-written dir).
+    let project = Project::for_repo(repo.path());
+    assert!(
+        !project
+            .skills_dir()
+            .join("understand-the-problem")
+            .join("SKILL.md")
+            .exists(),
+        "init must not write any skill state when it fails on a non-git dir"
+    );
+    assert!(
+        !project.lock_path().exists(),
+        "init must not write a lock when it fails on a non-git dir"
+    );
+}
+
+#[test]
+fn memory_install_tracks_navigator_in_lock() {
+    let cat = tempfile::tempdir().unwrap();
+    make_catalog(cat.path());
+    let repo = tempfile::tempdir().unwrap();
+    make_git_repo(repo.path());
+    fs::write(repo.path().join("Cargo.toml"), "[package]\nname=\"x\"\n").unwrap();
+
+    let fake_home = tempfile::tempdir().unwrap();
+    std::env::set_var("HOME", fake_home.path());
+    std::env::set_var("XDG_CONFIG_HOME", fake_home.path().join(".config"));
+
+    // Make codebase-memory-mcp look already-installed so memory_install skips
+    // the network installer (curl|bash) and the test stays hermetic.
+    let bin_dir = fake_home.path().join(".local").join("bin");
+    fs::create_dir_all(&bin_dir).unwrap();
+    fs::write(bin_dir.join("codebase-memory-mcp"), "#!/bin/sh\n").unwrap();
+
+    commands::init(cat.path(), repo.path(), &[], false).unwrap();
+
+    let before = commands::list(cat.path(), Some(repo.path())).unwrap();
+    assert!(
+        !before
+            .installed
+            .unwrap()
+            .iter()
+            .any(|e| e.name == "codebase-navigator"),
+        "navigator should not be installed by plain init"
+    );
+
+    // Dry-run must not write anything but must still succeed.
+    commands::memory_install(cat.path(), repo.path(), true).unwrap();
+    let after_dry = commands::list(cat.path(), Some(repo.path())).unwrap();
+    assert!(
+        !after_dry
+            .installed
+            .unwrap()
+            .iter()
+            .any(|e| e.name == "codebase-navigator"),
+        "dry-run memory install must not actually track the navigator"
+    );
+
+    // Real run tracks the navigator in the lock so `list`/`update` manage it.
+    // (The codebase-memory-mcp binary download is skipped here because it isn't
+    // present; the navigator-install path runs regardless.)
+    commands::memory_install(cat.path(), repo.path(), false).unwrap();
+    let after = commands::list(cat.path(), Some(repo.path())).unwrap();
+    assert!(
+        after
+            .installed
+            .unwrap()
+            .iter()
+            .any(|e| e.name == "codebase-navigator"),
+        "memory install must track the navigator in the lock"
+    );
 }

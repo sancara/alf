@@ -36,7 +36,8 @@ fn default_attempts() -> u32 {
 impl ProjectConfig {
     pub fn save(&self, fs: &mut Fs, path: &Path) -> Result<(), AlfError> {
         let body = toml::to_string_pretty(self).map_err(|e| AlfError::TomlSer { source: e })?;
-        let text = format!("# alf project config. Committed; applies to everyone in this repo.\n\n{body}");
+        let text =
+            format!("# alf project config. Committed; applies to everyone in this repo.\n\n{body}");
         fs.write(path, &text)
     }
 }

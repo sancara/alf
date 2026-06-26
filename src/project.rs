@@ -42,13 +42,23 @@ impl Project {
     }
 
     // alf state paths — all under ~/.config/alf/projects/<hash>/
-    pub fn alf_dir(&self) -> PathBuf { self.alf_root.clone() }
-    pub fn manifest_path(&self) -> PathBuf { self.alf_root.join("manifest.toml") }
-    pub fn lock_path(&self) -> PathBuf { self.alf_root.join("lock.toml") }
-    pub fn config_path(&self) -> PathBuf { self.alf_root.join("config.toml") }
+    pub fn alf_dir(&self) -> PathBuf {
+        self.alf_root.clone()
+    }
+    pub fn manifest_path(&self) -> PathBuf {
+        self.alf_root.join("manifest.toml")
+    }
+    pub fn lock_path(&self) -> PathBuf {
+        self.alf_root.join("lock.toml")
+    }
+    pub fn config_path(&self) -> PathBuf {
+        self.alf_root.join("config.toml")
+    }
 
     // Skills installed for this project — also outside the repo.
-    pub fn skills_dir(&self) -> PathBuf { self.alf_root.join("skills") }
+    pub fn skills_dir(&self) -> PathBuf {
+        self.alf_root.join("skills")
+    }
 }
 
 fn find_repo_root(start: &Path) -> Option<PathBuf> {

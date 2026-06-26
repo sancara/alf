@@ -30,7 +30,8 @@ impl Manifest {
     }
 
     pub fn declare(&mut self, name: &str, requirement: &str) {
-        self.skills.insert(name.to_string(), requirement.to_string());
+        self.skills
+            .insert(name.to_string(), requirement.to_string());
     }
 
     pub fn save(&self, fs: &mut Fs, path: &Path) -> Result<(), AlfError> {

@@ -70,7 +70,12 @@ impl Catalog {
 }
 
 fn git_capture(cwd: &Path, args: &[&str]) -> Option<String> {
-    let output = Command::new("git").arg("-C").arg(cwd).args(args).output().ok()?;
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(cwd)
+        .args(args)
+        .output()
+        .ok()?;
     if !output.status.success() {
         return None;
     }

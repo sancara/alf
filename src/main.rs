@@ -130,8 +130,7 @@ fn run() -> Result<()> {
         }
 
         Commands::Update { name } => {
-            let (fs, report) =
-                commands::update(&catalog_path, &cwd, name.as_deref(), cli.dry_run)?;
+            let (fs, report) = commands::update(&catalog_path, &cwd, name.as_deref(), cli.dry_run)?;
             print_actions(&fs.actions, cli.dry_run);
             println!();
             for entry in &report {

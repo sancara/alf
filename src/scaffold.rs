@@ -52,10 +52,7 @@ pub fn regenerate_claude_skill(
 
 /// Write the AGENTS.md and CLAUDE.local.md context files into the alf
 /// project dir (not the repo). These point the agent at the skills.
-pub fn write_context_files(
-    fs: &mut Fs,
-    alf_project_dir: &Path,
-) -> Result<(), AlfError> {
+pub fn write_context_files(fs: &mut Fs, alf_project_dir: &Path) -> Result<(), AlfError> {
     fs.write_if_absent(&alf_project_dir.join("AGENTS.md"), AGENTS_TEMPLATE)?;
     fs.write_if_absent(&alf_project_dir.join("CLAUDE.local.md"), CLAUDE_POINTER)?;
     Ok(())

@@ -41,10 +41,12 @@ const MARKER: &str = "# --- alf";
 /// Append alf's exclude patterns to `.git/info/exclude` if they aren't
 /// already present. Idempotent: safe to call on every `alf init`.
 pub fn ensure_git_exclude(fs: &mut Fs, repo_root: &Path) -> Result<(), AlfError> {
-    let git_dir = find_git_dir(repo_root).ok_or_else(|| AlfError::Message(format!(
-        "no .git directory found at or above {}; is this a git repo?",
-        repo_root.display()
-    )))?;
+    let git_dir = find_git_dir(repo_root).ok_or_else(|| {
+        AlfError::Message(format!(
+            "no .git directory found at or above {}; is this a git repo?",
+            repo_root.display()
+        ))
+    })?;
 
     let exclude_path = git_dir.join("info").join("exclude");
 
@@ -60,10 +62,8 @@ pub fn ensure_git_exclude(fs: &mut Fs, repo_root: &Path) -> Result<(), AlfError>
 
     // Already present — idempotent.
     if current.contains(MARKER) {
-        fs.actions.push(format!(
-            "skip (already present) {}",
-            exclude_path.display()
-        ));
+        fs.actions
+            .push(format!("skip (already present) {}", exclude_path.display()));
         return Ok(());
     }
 

@@ -4,6 +4,7 @@ use std::process::Command;
 
 use crate::catalog::Catalog;
 use crate::config::ProjectConfig;
+use crate::detect;
 use crate::error::AlfError;
 use crate::fsops::Fs;
 use crate::gitexclude;
@@ -12,7 +13,6 @@ use crate::manifest::Manifest;
 use crate::project::Project;
 use crate::scaffold;
 use crate::skill::{content_hash_of, Skill};
-use crate::detect;
 use crate::version::{bump_version, set_frontmatter_version, Bump};
 
 /// Generic personas installed in every project.
@@ -35,7 +35,11 @@ pub struct CatalogEntry {
 }
 
 #[derive(PartialEq)]
-pub enum InstallStatus { Ok, Modified, Missing }
+pub enum InstallStatus {
+    Ok,
+    Modified,
+    Missing,
+}
 
 pub struct InstalledEntry {
     pub name: String,
@@ -60,15 +64,19 @@ pub fn list(catalog_root: &Path, project_root: Option<&Path>) -> Result<ListRepo
         None => None,
     };
 
-    let installed_names: Vec<String> = installed.as_ref()
+    let installed_names: Vec<String> = installed
+        .as_ref()
         .map(|v| v.iter().map(|e| e.name.clone()).collect())
         .unwrap_or_default();
 
-    let catalog = catalog_skills.into_iter().map(|s| CatalogEntry {
-        installed: installed_names.contains(&s.name),
-        name: s.name,
-        version: s.version,
-    }).collect();
+    let catalog = catalog_skills
+        .into_iter()
+        .map(|s| CatalogEntry {
+            installed: installed_names.contains(&s.name),
+            name: s.name,
+            version: s.version,
+        })
+        .collect();
 
     Ok(ListReport { catalog, installed })
 }
@@ -125,18 +133,28 @@ pub fn init(
     };
 
     let mut required: Vec<String> = Vec::new();
-    for g in GENERIC_SKILLS { push(g, &mut required); }
-    for w in with { push(w, &mut required); }
+    for g in GENERIC_SKILLS {
+        push(g, &mut required);
+    }
+    for w in with {
+        push(w, &mut required);
+    }
 
     let mut detected: Vec<String> = Vec::new();
     for v in detect::detect_verticals(repo_dir) {
-        if !required.iter().any(|n| n == v) { push(v, &mut detected); }
+        if !required.iter().any(|n| n == v) {
+            push(v, &mut detected);
+        }
     }
 
     let mut skills: Vec<Skill> = Vec::new();
-    for name in &required { skills.push(catalog.get(name)?); }
+    for name in &required {
+        skills.push(catalog.get(name)?);
+    }
     for name in &detected {
-        if let Ok(skill) = catalog.get(name) { skills.push(skill); }
+        if let Ok(skill) = catalog.get(name) {
+            skills.push(skill);
+        }
     }
 
     let (remote, commit) = catalog.provenance();
@@ -178,23 +196,25 @@ pub fn init(
 
 // ---------------- add ----------------
 
-pub fn add(
-    catalog_root: &Path,
-    repo_root: &Path,
-    name: &str,
-    dry_run: bool,
-) -> Result<Fs, AlfError> {
-    let catalog = Catalog::open(catalog_root)?;
-    let skill = catalog.get(name)?;
-    let project = Project::find(repo_root)?;
-    let home = home_dir();
-
-    let mut fs = Fs::new(dry_run);
-    scaffold::install_skill(&mut fs, &project.skills_dir(), &home, &skill)?;
+/// Install one catalog skill into a project and track it in the manifest + lock.
+///
+/// This is the single source of truth for "make a skill a first-class member of
+/// this project": it copies the files (via `install_skill`) AND records the
+/// declaration (manifest) and the resolved version + hash (lock). Both `add` and
+/// `memory_install` go through here so that every installed skill is equally
+/// updatable by `update` and detectable as drift by `list`/`plearn`.
+fn install_and_track(
+    fs: &mut Fs,
+    catalog: &Catalog,
+    project: &Project,
+    home: &Path,
+    skill: &Skill,
+) -> Result<(), AlfError> {
+    scaffold::install_skill(fs, &project.skills_dir(), home, skill)?;
 
     let mut manifest = Manifest::load(&project.manifest_path())?;
     manifest.declare(&skill.name, "*");
-    manifest.save(&mut fs, &project.manifest_path())?;
+    manifest.save(fs, &project.manifest_path())?;
 
     let (remote, commit) = catalog.provenance();
     let mut lock = if project.lock_path().exists() {
@@ -208,7 +228,24 @@ pub fn add(
         hash: skill.content_hash()?,
         source: format!("skills/{}", skill.name),
     });
-    lock.save(&mut fs, &project.lock_path())?;
+    lock.save(fs, &project.lock_path())?;
+
+    Ok(())
+}
+
+pub fn add(
+    catalog_root: &Path,
+    repo_root: &Path,
+    name: &str,
+    dry_run: bool,
+) -> Result<Fs, AlfError> {
+    let catalog = Catalog::open(catalog_root)?;
+    let skill = catalog.get(name)?;
+    let project = Project::find(repo_root)?;
+    let home = home_dir();
+
+    let mut fs = Fs::new(dry_run);
+    install_and_track(&mut fs, &catalog, &project, &home, &skill)?;
 
     Ok(fs)
 }
@@ -260,7 +297,12 @@ pub fn update(
                 source: format!("skills/{}", latest.name),
             });
         }
-        report.push(UpdateEntry { name, from, to: latest.version.clone(), changed });
+        report.push(UpdateEntry {
+            name,
+            from,
+            to: latest.version.clone(),
+            changed,
+        });
     }
 
     if report.iter().any(|e| e.changed) {
@@ -293,11 +335,19 @@ pub fn catalog_init(path: &Path, remote: Option<&str>, dry_run: bool) -> Result<
             }
 
             run_git(&mut fs, Some(path), &["add", "."])?;
-            run_git(&mut fs, Some(path), &[
-                "-c", "user.name=alf",
-                "-c", "user.email=alf@localhost",
-                "commit", "-m", "seed: 8 built-in personas",
-            ])?;
+            run_git(
+                &mut fs,
+                Some(path),
+                &[
+                    "-c",
+                    "user.name=alf",
+                    "-c",
+                    "user.email=alf@localhost",
+                    "commit",
+                    "-m",
+                    "seed: 8 built-in personas",
+                ],
+            )?;
         }
     }
     Ok(fs)
@@ -305,7 +355,10 @@ pub fn catalog_init(path: &Path, remote: Option<&str>, dry_run: bool) -> Result<
 
 // ---------------- plearn ----------------
 
-pub enum PlearnKind { ModifiedFromCatalog, NewLocal }
+pub enum PlearnKind {
+    ModifiedFromCatalog,
+    NewLocal,
+}
 
 pub struct PlearnEntry {
     pub name: String,
@@ -330,12 +383,20 @@ pub fn plearn(
     let locked_names: Vec<String> = lock.skills.iter().map(|s| s.name.clone()).collect();
     for name in &locked_names {
         let dir = project.skills_dir().join(name);
-        if !dir.join("SKILL.md").is_file() { continue; }
+        if !dir.join("SKILL.md").is_file() {
+            continue;
+        }
         let skill = Skill::load(&dir)?;
         let current_hash = skill.content_hash()?;
-        let locked_hash = lock.skills.iter().find(|s| &s.name == name)
-            .map(|s| s.hash.clone()).unwrap_or_default();
-        if current_hash == locked_hash { continue; }
+        let locked_hash = lock
+            .skills
+            .iter()
+            .find(|s| &s.name == name)
+            .map(|s| s.hash.clone())
+            .unwrap_or_default();
+        if current_hash == locked_hash {
+            continue;
+        }
 
         let diff = catalog.as_ref().and_then(|c| {
             git_diff_no_index(
@@ -356,18 +417,24 @@ pub fn plearn(
         changed = true;
     }
 
-    if let Ok(read) = fs::read_dir(&project.skills_dir()) {
+    if let Ok(read) = fs::read_dir(project.skills_dir()) {
         for entry in read.flatten() {
             let path = entry.path();
             let name = entry.file_name().to_string_lossy().to_string();
             if path.is_dir() && path.join("SKILL.md").is_file() && !locked_names.contains(&name) {
-                entries.push(PlearnEntry { name: name.clone(), kind: PlearnKind::NewLocal, diff: None });
+                entries.push(PlearnEntry {
+                    name: name.clone(),
+                    kind: PlearnKind::NewLocal,
+                    diff: None,
+                });
                 scaffold::regenerate_claude_skill(&mut fs, &project.skills_dir(), &home, &name)?;
             }
         }
     }
 
-    if changed { lock.save(&mut fs, &project.lock_path())?; }
+    if changed {
+        lock.save(&mut fs, &project.lock_path())?;
+    }
 
     Ok((fs, entries))
 }
@@ -400,10 +467,13 @@ pub fn glearn(
     let proj_dir = project.skills_dir().join(name);
     let proj_md = proj_dir.join("SKILL.md");
     if !proj_md.is_file() {
-        return Err(AlfError::SkillNotFound { name: name.to_string() });
+        return Err(AlfError::SkillNotFound {
+            name: name.to_string(),
+        });
     }
     let proj_content = fs::read_to_string(&proj_md).map_err(|e| AlfError::SkillRead {
-        path: proj_md.clone(), source: e,
+        path: proj_md.clone(),
+        source: e,
     })?;
 
     let cat_dir = catalog.skills_dir().join(name);
@@ -412,9 +482,12 @@ pub fn glearn(
 
     let diff = if cat_md.is_file() {
         git_diff_no_index(&cat_md, &proj_md)
-    } else { None };
+    } else {
+        None
+    };
 
-    let base = from_version.clone()
+    let base = from_version
+        .clone()
         .or_else(|| Skill::load(&proj_dir).ok().map(|s| s.version))
         .unwrap_or_else(|| "0.0.0".to_string());
     let to_version = match explicit_version {
@@ -438,12 +511,25 @@ pub fn glearn(
     let mut committed = false;
     let mut pushed = false;
     if catalog_is_git {
-        run_git(&mut fs, Some(&catalog.root), &["add", &format!("skills/{name}")])?;
+        run_git(
+            &mut fs,
+            Some(&catalog.root),
+            &["add", &format!("skills/{name}")],
+        )?;
         let msg = format!("glearn: {name} -> {to_version}");
-        run_git(&mut fs, Some(&catalog.root), &[
-            "-c", "user.name=alf", "-c", "user.email=alf@localhost",
-            "commit", "-m", &msg,
-        ])?;
+        run_git(
+            &mut fs,
+            Some(&catalog.root),
+            &[
+                "-c",
+                "user.name=alf",
+                "-c",
+                "user.email=alf@localhost",
+                "commit",
+                "-m",
+                &msg,
+            ],
+        )?;
         committed = true;
         if push {
             run_git(&mut fs, Some(&catalog.root), &["push"])?;
@@ -470,20 +556,35 @@ pub fn glearn(
     });
     lock.save(&mut fs, &project.lock_path())?;
 
-    Ok((fs, GlearnResult {
-        name: name.to_string(), from_version, to_version, diff,
-        catalog_is_git, committed, pushed,
-    }))
+    Ok((
+        fs,
+        GlearnResult {
+            name: name.to_string(),
+            from_version,
+            to_version,
+            diff,
+            catalog_is_git,
+            committed,
+            pushed,
+        },
+    ))
 }
 
 fn git_diff_no_index(a: &Path, b: &Path) -> Option<String> {
     let output = Command::new("git")
-        .args(["diff", "--no-index", "--"]).arg(a).arg(b)
-        .output().ok()?;
+        .args(["diff", "--no-index", "--"])
+        .arg(a)
+        .arg(b)
+        .output()
+        .ok()?;
     match output.status.code() {
         Some(0) | Some(1) => {
             let text = String::from_utf8_lossy(&output.stdout).to_string();
-            if text.trim().is_empty() { None } else { Some(text) }
+            if text.trim().is_empty() {
+                None
+            } else {
+                Some(text)
+            }
         }
         _ => None,
     }
@@ -491,16 +592,24 @@ fn git_diff_no_index(a: &Path, b: &Path) -> Option<String> {
 
 fn run_git(fs: &mut Fs, cwd: Option<&Path>, args: &[&str]) -> Result<(), AlfError> {
     let mut shown = String::from("git");
-    if let Some(dir) = cwd { shown.push_str(&format!(" -C {}", dir.display())); }
+    if let Some(dir) = cwd {
+        shown.push_str(&format!(" -C {}", dir.display()));
+    }
     shown.push(' ');
     shown.push_str(&args.join(" "));
     fs.actions.push(shown.clone());
 
-    if fs.dry_run { return Ok(()); }
+    if fs.dry_run {
+        return Ok(());
+    }
 
     let mut command = Command::new("git");
-    if let Some(dir) = cwd { command.arg("-C").arg(dir); }
-    let output = command.args(args).output()
+    if let Some(dir) = cwd {
+        command.arg("-C").arg(dir);
+    }
+    let output = command
+        .args(args)
+        .output()
         .map_err(|e| AlfError::Git(format!("could not run `{shown}`: {e}")))?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
@@ -520,14 +629,19 @@ pub struct MemoryInstallResult {
 
 /// Install codebase-memory-mcp (if not already present) and add its
 /// data directory to .git/info/exclude so it never pollutes git status.
-pub fn memory_install(catalog_root: &Path, repo_root: &Path, dry_run: bool) -> Result<(Fs, MemoryInstallResult), AlfError> {
+pub fn memory_install(
+    catalog_root: &Path,
+    repo_root: &Path,
+    dry_run: bool,
+) -> Result<(Fs, MemoryInstallResult), AlfError> {
     let mut fs = Fs::new(dry_run);
 
     // Check if already installed
     let already_installed = is_cbm_installed();
 
     if already_installed {
-        fs.actions.push("codebase-memory-mcp already installed — skipping download".to_string());
+        fs.actions
+            .push("codebase-memory-mcp already installed — skipping download".to_string());
     } else {
         // Invoke the official installer via sh
         let script = "curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash";
@@ -537,9 +651,9 @@ pub fn memory_install(catalog_root: &Path, repo_root: &Path, dry_run: bool) -> R
                 .arg("-c")
                 .arg(script)
                 .status()
-                .map_err(|e| AlfError::Message(format!(
-                    "could not run codebase-memory-mcp installer: {e}"
-                )))?;
+                .map_err(|e| {
+                    AlfError::Message(format!("could not run codebase-memory-mcp installer: {e}"))
+                })?;
             if !status.success() {
                 return Ok((fs, MemoryInstallResult {
                     already_installed: false,
@@ -554,39 +668,73 @@ pub fn memory_install(catalog_root: &Path, repo_root: &Path, dry_run: bool) -> R
     // Add .codebase-memory/ to .git/info/exclude
     let exclude_updated = add_cbm_to_exclude(&mut fs, repo_root)?;
 
-    // Install the skill that teaches the agent how to use the graph.
-    // Best-effort: if the catalog or the skill is missing, we skip silently
-    // rather than failing the whole command.
-    if !dry_run {
-        if let Ok(catalog) = Catalog::open(catalog_root) {
-            if let Ok(skill) = catalog.get("codebase-navigator") {
-                if let Ok(project) = Project::find(repo_root) {
-                    let home = home_dir();
-                    let _ = scaffold::install_skill(&mut fs, &project.skills_dir(), &home, &skill);
-                }
+    // Install the skill that teaches the agent how to use the graph, tracking
+    // it in the manifest + lock so `update`/`list`/`plearn` manage it like any
+    // other skill. We run this in dry-run too, so the plan reflects it.
+    //
+    // Resolving the project requires a git repo; if there isn't one,
+    // `add_cbm_to_exclude` above would already have failed. The catalog or the
+    // navigator skill being absent is a soft condition (e.g. a hand-built
+    // catalog) — we note it and carry on rather than failing the install.
+    let navigator_installed = match Catalog::open(catalog_root) {
+        Ok(catalog) => match catalog.get("codebase-navigator") {
+            Ok(skill) => {
+                let project = Project::find(repo_root)?;
+                let home = home_dir();
+                install_and_track(&mut fs, &catalog, &project, &home, &skill)?;
+                true
             }
+            Err(_) => {
+                fs.actions.push(
+                    "note: `codebase-navigator` not found in the catalog — skipping (run `alf catalog init` to get it)".to_string(),
+                );
+                false
+            }
+        },
+        Err(_) => {
+            fs.actions.push(
+                "note: catalog not found — skipping `codebase-navigator` install".to_string(),
+            );
+            false
         }
-    }
-
-    let message = if dry_run {
-        "dry run: nothing was installed. Without --dry-run, alf would install \
-         codebase-memory-mcp and add .codebase-memory/ to .git/info/exclude."
-            .to_string()
-    } else if already_installed {
-        "codebase-memory-mcp already installed. .codebase-memory/ added to .git/info/exclude."
-            .to_string()
-    } else {
-        "codebase-memory-mcp installed. Restart your agent and say \"Index this project\" \
-         to build the knowledge graph."
-            .to_string()
     };
 
-    Ok((fs, MemoryInstallResult {
-        already_installed,
-        installed_ok: true,
-        exclude_updated,
-        message,
-    }))
+    let navigator_note = if navigator_installed {
+        " The `codebase-navigator` skill was installed to guide the agent."
+    } else {
+        ""
+    };
+
+    let message = if dry_run {
+        let nav = if navigator_installed {
+            " It would also install the `codebase-navigator` skill to guide the agent."
+        } else {
+            ""
+        };
+        format!(
+            "dry run: nothing was installed. Without --dry-run, alf would install \
+             codebase-memory-mcp and add .codebase-memory/ to .git/info/exclude.{nav}"
+        )
+    } else if already_installed {
+        format!(
+            "codebase-memory-mcp already installed. .codebase-memory/ added to .git/info/exclude.{navigator_note}"
+        )
+    } else {
+        format!(
+            "codebase-memory-mcp installed. Restart your agent and say \"Index this project\" \
+             to build the knowledge graph.{navigator_note}"
+        )
+    };
+
+    Ok((
+        fs,
+        MemoryInstallResult {
+            already_installed,
+            installed_ok: true,
+            exclude_updated,
+            message,
+        },
+    ))
 }
 
 fn is_cbm_installed() -> bool {
@@ -612,11 +760,12 @@ const CBM_EXCLUDE_PATTERNS: &[&str] = &[
 const CBM_MARKER: &str = "# --- codebase-memory-mcp";
 
 fn add_cbm_to_exclude(fs: &mut Fs, repo_root: &Path) -> Result<bool, AlfError> {
-    let git_dir = crate::gitexclude::find_git_dir_pub(repo_root)
-        .ok_or_else(|| AlfError::Message(format!(
+    let git_dir = crate::gitexclude::find_git_dir_pub(repo_root).ok_or_else(|| {
+        AlfError::Message(format!(
             "no .git directory found at or above {}",
             repo_root.display()
-        )))?;
+        ))
+    })?;
 
     let exclude_path = git_dir.join("info").join("exclude");
     let current = if exclude_path.exists() {
@@ -629,7 +778,8 @@ fn add_cbm_to_exclude(fs: &mut Fs, repo_root: &Path) -> Result<bool, AlfError> {
     };
 
     if current.contains(CBM_MARKER) {
-        fs.actions.push(format!("skip (already present) {}", exclude_path.display()));
+        fs.actions
+            .push(format!("skip (already present) {}", exclude_path.display()));
         return Ok(false);
     }
 

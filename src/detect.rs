@@ -62,7 +62,10 @@ fn has_file_with_ext(root: &Path, exts: &[&str]) -> bool {
             let name = entry.file_name();
             let name = name.to_string_lossy();
             if path.is_dir() {
-                if matches!(name.as_ref(), "node_modules" | "target" | ".git" | "dist" | "build") {
+                if matches!(
+                    name.as_ref(),
+                    "node_modules" | "target" | ".git" | "dist" | "build"
+                ) {
                     continue;
                 }
                 if walk(&path, exts, depth - 1) {

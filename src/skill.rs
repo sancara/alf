@@ -24,25 +24,18 @@ impl Skill {
             source: e,
         })?;
 
-        let fields =
-            parse_frontmatter(&content).ok_or_else(|| AlfError::SkillFrontmatter {
-                path: md_path.clone(),
-            })?;
+        let fields = parse_frontmatter(&content).ok_or_else(|| AlfError::SkillFrontmatter {
+            path: md_path.clone(),
+        })?;
 
-        let name = fields
-            .get("name")
-            .cloned()
-            .ok_or(AlfError::SkillField {
-                path: md_path.clone(),
-                field: "name",
-            })?;
-        let version = fields
-            .get("version")
-            .cloned()
-            .ok_or(AlfError::SkillField {
-                path: md_path.clone(),
-                field: "version",
-            })?;
+        let name = fields.get("name").cloned().ok_or(AlfError::SkillField {
+            path: md_path.clone(),
+            field: "name",
+        })?;
+        let version = fields.get("version").cloned().ok_or(AlfError::SkillField {
+            path: md_path.clone(),
+            field: "version",
+        })?;
         let description = fields.get("description").cloned().unwrap_or_default();
 
         Ok(Skill {
