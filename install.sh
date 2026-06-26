@@ -76,13 +76,15 @@ else
   echo "Installed to $FALLBACK/$BIN_NAME"
 
   # Persist PATH so alf is available in every new terminal.
+  # We check for an *active* (uncommented) export line — a commented-out line
+  # from a default macOS/Linux rc doesn't count as already configured.
   EXPORT_LINE="export PATH=\"\$HOME/.local/bin:\$PATH\""
   for RC in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.profile"; do
-    if [ -f "$RC" ] && ! grep -q '.local/bin' "$RC" 2>/dev/null; then
+    if [ -f "$RC" ] && ! grep -qE '^[^#]*\.local/bin' "$RC" 2>/dev/null; then
       echo "" >> "$RC"
       echo "# added by alf installer" >> "$RC"
       echo "$EXPORT_LINE" >> "$RC"
-      echo "Added PATH to $RC"
+      echo "Added PATH to $RC — restart your terminal or run: source $RC"
       break
     fi
   done
